@@ -88,7 +88,7 @@ AFRAME.registerComponent('gesture', {
         let dragFun = this._dragFun = () => {
             let ray = this.el.components.raycaster.raycaster.ray;
             let p = ray.direction.clone().multiplyScalar(this.data.lineDistance).add(ray.origin);
-            if (lastPos && lastPos.distanceTo(p) < this.data.lineDistance / 20) {
+            if (lastPos && lastPos.distanceTo(p) < this.data.lineDistance / 25) {
                 return;
             }
             if (lastPos && !dragging) {
@@ -143,7 +143,7 @@ AFRAME.registerComponent('gesture', {
             UP: { type: "line", deg: 90 },
             DOWN: { type: "line", deg: -90 },
             RIGHT: { type: "line", deg: 0 },
-            LEFT: { type: "line", deg: 0 },
+            LEFT: { type: "line", deg: 180 },
         };
         return this.gestures.find(g => {
             return g.motions.length == motions.length &&
@@ -168,21 +168,22 @@ AFRAME.registerComponent('gesture', {
         if (points.length < 3) {
             return motions;
         }
-        const threshold = 0.5;
-        const curveThreshold = Math.PI / 2;
-        let cornerLen = Math.max(1, points.length / 20 | 0);
+        const cornerThreshold = 0.5
+        const curveThreshold = 60 * Math.PI / 180;
+        let cornerLen = Math.max(2, points.length / 20 | 0);
         let dvv = [];
         for (let i = 0; i < points.length - 1; i++) {
             let v = points[i + 1].clone().sub(points[i]);
             dvv.push(new THREE.Vector2(v.x, v.y).normalize());
         }
+        let minLen = Math.max(3, points.length / 20);
 
         let rot = 0;
         let st = 0;
-        for (let i = 0; i < dvv.length - cornerLen; i++) {
+        for (let i = 0; i < dvv.length; i++) {
             let v = dvv[i];
-            if (v.dot(dvv[i + cornerLen]) < threshold || i == dvv.length - cornerLen - 1) {
-                if (i - st > 3) {
+            if (i + cornerLen < dvv.length && v.dot(dvv[i + cornerLen]) < cornerThreshold || i == dvv.length - 1) {
+                if (i - st >= minLen) {
                     let len = (i - st) / dvv.length;
                     if (Math.abs(rot) > curveThreshold) {
                         motions.push({ type: "curve", rot: THREE.Math.radToDeg(rot), len: len });

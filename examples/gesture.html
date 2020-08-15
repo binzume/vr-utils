@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Gesture test</title>
+    <script src="https://binzume.github.io/aframe/dist/aframe-master.min.js"></script>
+    <script src="../gesture.js"></script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', (ev) => {
+            document.body.addEventListener('gesture', async (ev) => {
+                let sceneEl = document.querySelector('a-scene');
+                let pos = sceneEl.camera.localToWorld(ev.detail.center.clone());
+                if (ev.detail.name == 'O') {
+                    let el = document.createElement('a-sphere');
+                    el.setAttribute('position', pos);
+                    el.setAttribute('radius', 0.1);
+                    sceneEl.appendChild(el);
+                } else if (ev.detail.name == 'RECT') {
+                    let el = document.createElement('a-box');
+                    el.setAttribute('position', pos);
+                    el.setAttribute('width', 0.2);
+                    el.setAttribute('height', 0.2);
+                    el.setAttribute('depth', 0.2);
+                    document.querySelector('a-scene').appendChild(el);
+                } else if (ev.detail.name == '>') {
+                    for (let el of document.querySelectorAll('a-sphere,a-box')) {
+                        el.parentNode.removeChild(el);
+                    }
+                }
+                console.log(ev.detail);
+            });
+        });
+    </script>
+</head>
+
+<body style="background-color: black; color:white;">
+    <a-scene>
+        <a-entity cursor="rayOrigin: mouse; fuse:false" raycaster="objects:.collidable;far:5500" gesture="button:mouse;lineDistance:0.4"></a-entity>
+
+        <a-entity id="cameraRig" wasd-controls>
+            <a-camera position="0 1.5 0" look-controls="enabled:false"></a-camera>
+            <a-entity laser-controls="hand: right" raycaster="far:Infinity;objects:.collidable" gesture="button:grip"></a-entity>
+            <a-entity laser-controls="hand: left" raycaster="far:Infinity;objects:.collidable" gesture="button:grip"></a-entity>
+        </a-entity>
+
+    </a-scene>
+</body>
+
+</html>
