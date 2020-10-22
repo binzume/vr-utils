@@ -17,13 +17,17 @@ AFRAME.registerComponent('gesture', {
         this.downevent = data.button + 'down';
         this.upevent = data.button + 'up';
         this._onmousedown = this._onmousedown.bind(this);
+        this.sourceEl = el;
 
         if (data.button == 'grip') {
             // disable while dragging.
             el.addEventListener('triggerdown', ev => this.disable = true);
             el.addEventListener('triggerup', ev => this.disable = false);
         }
-        el.addEventListener(this.downevent, this._onmousedown);
+        if (data.button == 'mouse') {
+            this.sourceEl = this.el.sceneEl.canvas;
+        }
+        this.sourceEl.addEventListener(this.downevent, this._onmousedown);
     },
     tick() {
         if (this._dragFun) {
@@ -42,6 +46,7 @@ AFRAME.registerComponent('gesture', {
     async _loadGesture(src) {
         if (src == '#PRESET') {
             this.gestures = [
+                { name: "CLICK", motions: [] },
                 { name: "A", motions: ["UP", "DOWN"] },
                 { name: "B", motions: ["UP", { type: "curve", rot: 180 }, { type: "curve", rot: 180 }] },
                 { name: "C", motions: [{ type: "curve", rot: 180 }] },
@@ -114,29 +119,32 @@ AFRAME.registerComponent('gesture', {
         this.play();
 
         let mouseup = (ev) => {
-            el.removeEventListener(this.upevent, mouseup);
+            this.sourceEl.removeEventListener(this.upevent, mouseup);
+            console.log('gesture', this.upevent);
             this._dragFun = null;
             setTimeout(() => this.el.sceneEl.object3D.remove(line), this.data.lineFadeDelayMs);
             if (dragging) {
                 window.removeEventListener('mouseenter', cancelEvelt, true);
                 window.removeEventListener('mouseleave', cancelEvelt, true);
+            }
+            dragFun();
+            let cameraMatInv = this.el.sceneEl.camera.matrixWorldInverse;
+            points.forEach(p => p.applyMatrix4(cameraMatInv));
+            let motions = this._getMotions(points);
+            motions.forEach(m => console.log(JSON.stringify(m))); // debug
+            let g = this._detectGesture(motions);
+            if (g) {
+                let max = points.reduce((a, b) => new THREE.Vector3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)));
+                let min = points.reduce((a, b) => new THREE.Vector3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)));
+                this.el.emit("gesture", { name: g.name, center: max.add(min).multiplyScalar(0.5) });
+            }
+            if (motions.length > 0) {
                 let cancelClick = ev => ev.stopPropagation();
                 window.addEventListener('click', cancelClick, true);
                 setTimeout(() => window.removeEventListener('click', cancelClick, true), 0);
-                dragFun();
-                let cameraMatInv = this.el.sceneEl.camera.matrixWorldInverse;
-                points.forEach(p => p.applyMatrix4(cameraMatInv));
-                let motions = this._getMotions(points);
-                motions.forEach(m => console.log(JSON.stringify(m))); // debug
-                let g = this._detectGesture(motions);
-                if (g) {
-                    let max = points.reduce((a, b) => new THREE.Vector3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)));
-                    let min = points.reduce((a, b) => new THREE.Vector3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)));
-                    this.el.emit("gesture", { name: g.name, center: max.add(min).multiplyScalar(0.5) });
-                }
             }
         };
-        el.addEventListener(this.upevent, mouseup);
+        this.sourceEl.addEventListener(this.upevent, mouseup);
     },
     _detectGesture(motions) {
         const mapping = {
