@@ -9,6 +9,7 @@ AFRAME.registerComponent('gesture', {
         lineDistance: { default: 0.5 },
         lineFadeDelayMs: { default: 500 },
     },
+    multiple: true,
     init() {
         let el = this.el;
         let data = this.data;
@@ -19,15 +20,15 @@ AFRAME.registerComponent('gesture', {
         this._onmousedown = this._onmousedown.bind(this);
         this.sourceEl = el;
 
-        if (data.button == 'grip') {
+        if (data.button != 'mouse') {
             // disable while dragging.
             el.addEventListener('triggerdown', ev => this.disable = true);
             el.addEventListener('triggerup', ev => this.disable = false);
-        }
-        if (data.button == 'mouse') {
+        } else {
             this.sourceEl = this.el.sceneEl.canvas;
         }
         this.sourceEl.addEventListener(this.downevent, this._onmousedown);
+        this.sourceEl.addEventListener('trackpaddown', ev => console.log(ev));
     },
     tick() {
         if (this._dragFun) {
@@ -67,6 +68,11 @@ AFRAME.registerComponent('gesture', {
     },
     _onmousedown(ev) {
         if (!this.el.components.raycaster || this.disable) {
+            return;
+        }
+        /** @type {HTMLElement} */
+        let intersectedEl = this.el.components.raycaster.intersectedEls[0];
+        if (intersectedEl && intersectedEl.classList.contains('nogesture')) {
             return;
         }
         let dragging = false;
